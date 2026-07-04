@@ -1,0 +1,42 @@
+name: 24x7 Telegram Bot Runner
+
+on:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: '0 */5 * * *'   # Har 5 ghante mein workflow auto-restart hoga taaki continuous chalta rahe
+  workflow_dispatch:        # Manual trigger button bhi chalu rahega
+
+concurrency:
+  group: telegram-bot-session
+  cancel-in-progress: true  # Purana running instance automatic kill ho jayega taaki double reply ka jhanjhat na ho
+
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340    # 5 ghante 40 minute tak continuous chalega
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install System and Python Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install requests pynacl cryptg
+
+    - name: Execute Telegram Bot
+      env:
+        API_ID: 32569415
+        API_HASH: 4209968745cb99d37820d5ba7b4845bd
+        BOT_TOKEN: 8971366534:AAFMt-SyEdV2VAMBjXFgWfy48aAxSCi0vuo
+      run: |
+        echo "Starting Zip Password Remover Bot inside GitHub Actions Pipelines..."
+        python main.py

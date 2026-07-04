@@ -1,0 +1,6 @@
+telethon
+pyzipper
+pynacl
+cryptg
+git+https://github.com/mrinvisible3/FastTelethonhelper.git
+requests

@@ -29,7 +29,6 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        # Kuch networks par helper packages directly git bypass maangte hain, iske liye unsafe checks bypass:
         git config --global url."https://github.com/".insteadOf git@github.com:
         pip install --no-cache-dir -r requirements.txt
         pip install requests pynacl cryptg
@@ -37,24 +36,8 @@ jobs:
     - name: Execute Telegram Bot
       env:
         API_ID: 32569415
-        API_HASH: 4209968745cb99d37820d5ba7b4845bd
-        BOT_TOKEN: 8971366534:AAFMt-SyEdV2VAMBjXFgWfy48aAxSCi0vuo
-      run: |
-        echo "Starting Zip Password Remover Bot inside GitHub Actions Pipelines..."
-        python main.py
-thon-version: '3.10'
-
-    - name: Install System and Python Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install requests pynacl cryptg
-
-    - name: Execute Telegram Bot
-      env:
-        API_ID: 32569415
-        API_HASH: 4209968745cb99d37820d5ba7b4845bd
-        BOT_TOKEN: 8971366534:AAFMt-SyEdV2VAMBjXFgWfy48aAxSCi0vuo
+        API_HASH: "4209968745cb99d37820d5ba7b4845bd"
+        BOT_TOKEN: "8971366534:AAFMt-SyEdV2VAMBjXFgWfy48aAxSCi0vuo"
       run: |
         echo "Starting Zip Password Remover Bot inside GitHub Actions Pipelines..."
         python main.py

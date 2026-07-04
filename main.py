@@ -18,8 +18,8 @@ os.makedirs(WORK_DIR, exist_ok=True)
 CHANNEL_TAG = "@FeaturesticLeaks"
 OUTPUT_NAME = "@FeaturesticLeaks JOIN CHANNEL.zip"
 
-STALL_TIMEOUT = 45     # seconds with zero progress before warning the user
-HARD_TIMEOUT = 240     # seconds before giving up entirely
+STALL_WARN_TIMEOUT = 45      # seconds of zero NEW progress before showing a warning
+STALL_KILL_TIMEOUT = 180     # seconds of zero NEW progress before giving up entirely
 
 user_states = {}  # {user_id: {"step": "await_password", "path": str}}
 
@@ -90,44 +90,44 @@ class ProgressTracker:
 
 
 async def download_with_watchdog(event, path, tracker, status_msg,
-                                  stall_timeout=STALL_TIMEOUT, hard_timeout=HARD_TIMEOUT):
-    """Downloads the file while watching for stalls, so the bot never looks silently frozen."""
-    last_progress = {"bytes": 0, "time": time.time()}
+                                  warn_timeout=STALL_WARN_TIMEOUT, kill_timeout=STALL_KILL_TIMEOUT):
+    """Downloads the file. Only fails if progress genuinely stalls — never on total elapsed time."""
+    last_progress = {"bytes": -1, "time": time.time()}
 
     async def wrapped_callback(current, total):
-        last_progress["bytes"] = current
-        last_progress["time"] = time.time()
+        if current != last_progress["bytes"]:
+            last_progress["bytes"] = current
+            last_progress["time"] = time.time()
         await tracker.callback(current, total)
 
     download_task = asyncio.create_task(
         event.download_media(file=path, progress_callback=wrapped_callback)
     )
 
-    start = time.time()
     warned = False
     try:
         while not download_task.done():
             await asyncio.sleep(5)
             idle = time.time() - last_progress["time"]
-            elapsed = time.time() - start
 
-            if elapsed > hard_timeout:
+            if idle > kill_timeout:
                 download_task.cancel()
                 raise RuntimeError(
-                    "Download timed out — the connection to Telegram's servers is too slow right now. "
-                    "Please try again in a bit, or send a smaller file."
+                    "Download genuinely stalled — no new data for 3 minutes. "
+                    "Please try sending the file again."
                 )
 
-            if idle > stall_timeout and last_progress["bytes"] == 0 and not warned:
+            if idle > warn_timeout and not warned:
                 warned = True
                 try:
                     await status_msg.edit(
-                        "🐢 **Network is slow right now.**\n"
-                        "Still trying to connect to Telegram's servers — this can take a moment. "
+                        "🐢 **Network is slow right now, but still downloading.**\n"
                         "Hang tight, or /cancel to stop."
                     )
                 except Exception:
                     pass
+            elif idle <= warn_timeout:
+                warned = False  # progress resumed, reset the warning
 
         return await download_task
     except asyncio.CancelledError:
@@ -233,7 +233,7 @@ async def handle_message(event):
         try:
             await download_with_watchdog(event, path, tracker, status)
         except RuntimeError as e:
-            await status.edit(f"⏱️ **{e}**\n\nSend the file again to retry.")
+            await status.edit(f"⏱️ **{e}**")
             cleanup(path)
             return
         except Exception as e:
